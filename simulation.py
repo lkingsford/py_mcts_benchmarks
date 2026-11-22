@@ -10,7 +10,7 @@ We've got a basic implementation of a nasty version of the game show 'Countdown'
         - Can use each number up to once, either adding to, multiplying, dividing or subtracting from the previous number
         - Implemented as RPN with Stack, because game permits parentheses (and that seemed like a very easy way to emulate it)
     - Goal for the final number F to be as close as possible to the goal
-    - Reward is N0 minus F
+    - Reward is N0 minus abs(goal minus F)
 """
 
 from enum import Enum, auto
@@ -103,9 +103,30 @@ class Simulation:
             case self.PickOperation(operation):
                 stack = copy.deepcopy(self.stack)
                 new_instance.stack = stack
+                a = stack.pop(0)
+                b = stack.pop(0)
+                match operation:
+                    case self.Operation.ADD:
+                        stack.insert(0, a + b)
+                    case self.Operation.SUBTRACT:
+                        stack.insert(0, a - b)
+                    case self.Operation.MULTIPLY:
+                        stack.insert(0, a * b)
+                    case self.Operation.DIVIDE:
+                        stack.insert(0, int(a / b))
+                    case self.Operation.DONE:
+                        assert self.goal is not None
+                        new_instance.reward = MAX_GOAL - abs(self.goal - stack.pop(0))
+
             case self.PickNumber(number):
                 stack = copy.deepcopy(self.stack)
+                available_numbers = copy.deepcopy(self.available_numbers)
+                available_numbers.append(number)
+                available_numbers.remove(number)
+                stack.insert(0, number)
                 new_instance.stack = stack
+                new_instance.available_numbers = available_numbers
+
 
         return new_instance
                 
