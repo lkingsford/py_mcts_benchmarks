@@ -45,7 +45,7 @@ class Node:
         
         # Firstly - prioritise any unexplored child
         # (again - should be randomised)
-        unexplored = [child for child in self.children.items() if len(child[1].children) == 0]
+        unexplored = [child for child in self.children.items() if child[1].n == 0]
         if unexplored:
             return unexplored[0]
 
@@ -100,13 +100,13 @@ def run_game(iterations: int):
     # Need to manually get the root ready for the first time - like a partial expansion
     for action in s.possible_actions():
         root.children[action] = Node(state=s, parent=root)
-    selected_action, selected_node = root.select()
 
     best_reward = float('-inf')
 
     for iteration in range(iterations):
         logger.info("Starting iteration %s", iteration)
         logger.info("---------------------")
+        selected_action, selected_node = root.select()
 
         # No children means unexpanded
         while len(selected_node.children) != 0:

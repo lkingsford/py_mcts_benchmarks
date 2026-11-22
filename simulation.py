@@ -21,7 +21,7 @@ from typing import List, Optional
 import copy
 
 MIN_GOAL = 101
-MAX_GOAL = 1000
+MAX_GOAL = 10000
 NUMBERS = 10
 
 
@@ -120,7 +120,8 @@ class Simulation:
                 match operation:
                     case Operation.DONE:
                         assert self.goal is not None
-                        new_instance.reward = MAX_GOAL - abs(self.goal - stack.pop())
+                        diff = abs(self.goal - stack.pop())
+                        new_instance.reward = 1.0 / (1.0 + diff)          # 1.0 for exact, 0.5 for off-by-1, ~0.01 for off-by-100
                         new_instance.stage = Stage.TERMINAL
 
                     case _:
