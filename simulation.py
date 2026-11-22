@@ -21,8 +21,8 @@ from typing import List, Optional
 import copy
 
 MIN_GOAL = 101
-MAX_GOAL = 10000
-NUMBERS = 10
+MAX_GOAL = 100000
+NUMBERS = 6
 
 
 class Stage(Enum):

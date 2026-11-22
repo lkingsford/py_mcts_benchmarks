@@ -45,7 +45,7 @@ class Node:
         assert self.state is not None
 
         # Technically, we should be using a little randomness here as a tie breaker - otherwise
-        # it's going to weight th e
+        # it's going to weight towards the first actions.
         
         # Firstly - prioritise any unexplored child
         # (again - should be randomised)
@@ -99,7 +99,6 @@ def run_game(iterations: int):
     s = s.take_action(rng.choice(s.possible_actions()))
     print(f"Goal is {s.goal}")
 
-
     root = Node(state = s)
     # Need to manually get the root ready for the first time - like a partial expansion
     for action in s.possible_actions():
@@ -127,6 +126,8 @@ def run_game(iterations: int):
             best_reward = reward
             logger.critical("Reward improved iteration %s: %s", iteration, best_reward)
         selected_node.backprop(reward)
+        if reward == 1.0:
+            return
         
 
 
@@ -134,7 +135,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--iterations", "-i", default=1000, type=int)
     parser.add_argument("--verbose", "-v", action="count", default=0)
+    parser.add_argument("--seed", "-s", type=int, default=None)
     parsed = parser.parse_args()
+
+    if parsed.seed is not None:
+        rng.seed(parsed.seed)
 
     configure_logging(parsed.verbose)
 
