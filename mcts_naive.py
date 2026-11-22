@@ -4,6 +4,8 @@ from typing import Optional, Dict, Tuple
 import logging
 import math
 import random
+import statistics
+import time
 import tracemalloc
 import simulation
 from simulation import Action, Simulation
@@ -138,22 +140,35 @@ def main():
     parser.add_argument("--verbose", "-v", action="count", default=0)
     parser.add_argument("--seed", "-s", type=int, default=None)
     parser.add_argument("--tracemalloc", "-m", action="store_true")
+    parser.add_argument("--process-time", "-p", nargs="?", const=5, type=int, default=None, metavar="RUNS")
     parsed = parser.parse_args()
 
-    if parsed.seed is not None:
-        rng.seed(parsed.seed)
-
     configure_logging(parsed.verbose)
+
+    runs = parsed.process_time
+    if runs is not None and runs < 1:
+        parser.error("--process-time must be at least 1")
 
     if parsed.tracemalloc:
         tracemalloc.start()
 
-    run_game(parsed.iterations)
+    timings = []
+    for _ in range(runs if runs is not None else 1):
+        if parsed.seed is not None:
+            rng.seed(parsed.seed)
+        process_start = time.process_time()
+        run_game(parsed.iterations)
+        timings.append(time.process_time() - process_start)
 
     if parsed.tracemalloc:
         _, peak = tracemalloc.get_traced_memory()
         print(f"Peak memory usage: {peak / (1024 * 1024):.2f} MiB")
         tracemalloc.stop()
+    if runs is not None:
+        print(
+            f"Process time ({runs} runs): min/median/mean "
+            f"{min(timings):.3f}/{statistics.median(timings):.3f}/{statistics.mean(timings):.3f}"
+        )
 
     pass
 
