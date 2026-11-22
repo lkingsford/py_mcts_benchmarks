@@ -73,7 +73,7 @@ class Node:
         assert self.state is not None
         s = self.state
         while s.reward is None:
-            choice = rng.choice(self.state.possible_actions())
+            choice = rng.choice(s.possible_actions())
             s = s.take_action(choice)
 
         logger.debug("Reward %s", s.reward)
@@ -122,7 +122,7 @@ def run_game(iterations: int):
         if reward > best_reward:
             best_reward = reward
             logger.critical("Reward improved iteration %s: %s", iteration, best_reward)
-        selected_node.children[0].backprop(reward)
+        selected_node.backprop(reward)
         
 
 
