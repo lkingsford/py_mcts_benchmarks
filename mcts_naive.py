@@ -4,6 +4,7 @@ from typing import Optional, Dict, Tuple
 import logging
 import math
 import random
+import tracemalloc
 import simulation
 from simulation import Action, Simulation
 
@@ -44,8 +45,7 @@ class Node:
     def select(self) -> Tuple[Action, Node]:
         assert self.state is not None
 
-        # Technically, we should be using a little randomness here as a tie breaker - otherwise
-        # it's going to weight towards the first actions.
+        # The small rng additions are for tiebreakers to prevent weighting towards first actions
         
         # Firstly - prioritise any unexplored child
         # (again - should be randomised)
@@ -56,13 +56,14 @@ class Node:
         # Using 'R_' as an indicator of random - not a good practice, but
         # sample for now
         # If random, pick the option with the least visits
+        # The small rng is to randomize
         if str(self.state.stage).startswith("R_"):
-            sorted_by_n = sorted(self.children.items(), key=lambda item: item[1].n)
+            sorted_by_n = sorted(self.children.items(), key=lambda item: item[1].n + rng.random()/100000)
             return sorted_by_n[0]
 
         # Get UCB of each child
         # q_sum / n is to get the estimated value - the q
-        sorted_by_ucb = sorted(self.children.items(), key=lambda item: self._ucb(item[1].q_sum, item[1].n, self.n), reverse=True)
+        sorted_by_ucb = sorted(self.children.items(), key=lambda item: self._ucb(item[1].q_sum, item[1].n, self.n) + rng.random()/100000, reverse=True)
         return sorted_by_ucb[0]
         
 
@@ -136,6 +137,7 @@ def main():
     parser.add_argument("--iterations", "-i", default=1000, type=int)
     parser.add_argument("--verbose", "-v", action="count", default=0)
     parser.add_argument("--seed", "-s", type=int, default=None)
+    parser.add_argument("--tracemalloc", "-m", action="store_true")
     parsed = parser.parse_args()
 
     if parsed.seed is not None:
@@ -143,7 +145,15 @@ def main():
 
     configure_logging(parsed.verbose)
 
+    if parsed.tracemalloc:
+        tracemalloc.start()
+
     run_game(parsed.iterations)
+
+    if parsed.tracemalloc:
+        _, peak = tracemalloc.get_traced_memory()
+        print(f"Peak memory usage: {peak / (1024 * 1024):.2f} MiB")
+        tracemalloc.stop()
 
     pass
 
