@@ -16,7 +16,7 @@ We've got a basic implementation of a nasty version of the game show 'Countdown'
 from enum import Enum, auto
 from dataclasses import dataclass
 from typing import List, Optional
-import random
+import copy
 
 MIN_GOAL = 101
 MAX_GOAL = 1000
@@ -26,8 +26,9 @@ class Simulation:
     """ An instance of the simulation and its state """
     
     class Stage(Enum):
-        GET_GOAL = auto()
+        R_GET_GOAL = auto()
         PICKING_SIZES = auto()
+        R_PICK_NUMBER = auto() # Random based on picked size
         CHOOSE_OPERATION = auto()
 
     class NumberSize(Enum):
@@ -50,6 +51,10 @@ class Simulation:
         size: Simulation.NumberSize
 
     @dataclass(frozen=True)
+    class DrawNumber():
+        number: int
+
+    @dataclass(frozen=True)
     class PickOperation():
         operation: Simulation.Operation
 
@@ -57,22 +62,72 @@ class Simulation:
     class PickNumber():
         number: int
 
-    type Action = GetGoalAction | PickSize | PickOperation | PickNumber
+    type Action = GetGoalAction | PickSize | DrawNumber | PickOperation | PickNumber
 
     def __init__(self) -> None:
-        self.stage = Simulation.Stage.GET_GOAL
+        self.stage = Simulation.Stage.R_GET_GOAL
         self.available_numbers: List[int] = []
         self.stack: List[int] = []
+        self.reward: Optional[float] = None
+        self.goal: Optional[int] = None
+        self.last_size: Optional[Simulation.NumberSize] = None
 
-    def take_action(self) -> Simulation:
-        raise NotImplementedError()
+    def take_action(self, action: Simulation.Action) -> Simulation:
+        """
+        Take an action
+
+        No rules enforcement; handled in possible_actions
+        """
+
+        new_instance = copy.copy(self)
+
+        # Minimizing memory (a little) by copying every variable not modified
+        match action:
+            case self.GetGoalAction(number):
+                new_instance.goal = number
+
+            case self.PickSize(size):
+                new_instance.last_size = size
+                new_instance.stage = Simulation.Stage.R_PICK_NUMBER
+
+            case self.DrawNumber(number):   
+                available_numbers = copy.deepcopy(self.available_numbers)
+                available_numbers.append(number)
+                new_instance.available_numbers = available_numbers
+                if len(available_numbers) < NUMBERS:
+                    new_instance.stage = self.Stage.PICKING_SIZES
+                else:
+                    new_instance.stage = self.Stage.CHOOSE_OPERATION
+                return new_instance
+
+            case self.PickOperation(operation):
+                stack = copy.deepcopy(self.stack)
+                new_instance.stack = stack
+            case self.PickNumber(number):
+                stack = copy.deepcopy(self.stack)
+                new_instance.stack = stack
+
+        return new_instance
+                
+
 
     def possible_actions(self) -> List[Simulation.Action]:
+        """All the possible actions the player may make at this time"""
         match self.stage:
-            case self.Stage.GET_GOAL:
+            case self.Stage.R_GET_GOAL:
                 return [self.GetGoalAction(goal) for goal in range(MIN_GOAL, MAX_GOAL)]
+
             case self.Stage.PICKING_SIZES:
                 return [self.PickSize(self.NumberSize.SMALL), self.PickSize(self.NumberSize.LARGE)]
+
+            case self.Stage.R_PICK_NUMBER:
+                if self.last_size == self.NumberSize.SMALL:
+                    self.last_size = None
+                    return [self.DrawNumber(number) for number in range(1,10)]
+                else:
+                    self.last_size = None
+                    return [self.DrawNumber(number) for number in [25, 50, 75, 100]]
+
             case self.Stage.CHOOSE_OPERATION:
                 operations: List[Simulation.Action] = []
                 if len(self.stack) >= 2:
@@ -90,8 +145,5 @@ class Simulation:
                 return operations
 
 
-    def terminal(self) -> Optional[float]:
-        # Returns None if still going, float if there's a reward
-        raise NotImplementedError()
 
 
