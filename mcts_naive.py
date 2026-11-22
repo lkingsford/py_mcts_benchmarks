@@ -20,7 +20,11 @@ logger = logging.getLogger(__name__)
 
 def configure_logging(verbosity: int) -> None:
     level = LOG_LEVELS[min(verbosity, len(LOG_LEVELS) - 1)]
-    logging.basicConfig(level=level, format="%(levelname)s: %(message)s")
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s %(levelname)s: %(message)s",
+        datefmt="%H:%M:%S",
+    )
 
 
 @dataclass()
